@@ -19,9 +19,13 @@ For security scanning, use a tool built for that purpose.
 
 ## Install
 
+Install from Git (the package is not yet on the npm registry):
+
 ```bash
-npm install -g skilllint
+npm install -g github:khuang110/skill-lint
 ```
+
+This runs the `prepare` script, which builds the CLI from TypeScript.
 
 ## Use
 
