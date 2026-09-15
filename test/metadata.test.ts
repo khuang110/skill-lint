@@ -65,6 +65,34 @@ description: Does a thing.
   assert.ok(findings.some((f) => f.ruleId === "metadata/name-format"));
 });
 
+test("unicode name is valid and matches directory", () => {
+  const s = makeSkill(
+    `---
+name: café
+description: Does a thing.
+---
+
+# Café
+`,
+    "skills/café/SKILL.md",
+  );
+  s.bundleRoot = "/abs/skills/café";
+  const findings = frontmatterRule.run(s);
+  assert.deepEqual(findings, []);
+});
+
+test("consecutive hyphens still report metadata/name-format", () => {
+  const s = makeSkill(`---
+name: bad--name
+description: Does a thing.
+---
+
+# Demo
+`);
+  const findings = frontmatterRule.run(s);
+  assert.ok(findings.some((f) => f.ruleId === "metadata/name-format"));
+});
+
 test("name not matching directory reports metadata/name-matches-directory", () => {
   const s = makeSkill(
     `---

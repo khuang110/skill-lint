@@ -1,10 +1,12 @@
 import { basename } from "node:path";
 import type { Finding, Rule, SkillFile } from "../types.js";
 
-const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_NAME = 64;
 const MAX_DESCRIPTION = 1024;
 const MAX_COMPATIBILITY = 500;
+
+/** Unicode letters and numbers plus hyphens, matching the reference validator. */
+const NAME_CHAR_RE = /^[\p{L}\p{N}-]+$/u;
 
 function lineOf(content: string, needle: string): number {
   const idx = content.indexOf(needle);
@@ -35,7 +37,7 @@ export const frontmatterRule: Rule = {
     const fm = skill.frontmatter;
 
     const name = fm.name;
-    if (typeof name !== "string" || name.length === 0) {
+    if (typeof name !== "string" || name.trim().length === 0) {
       findings.push(
         find(
           skill,
@@ -45,33 +47,66 @@ export const frontmatterRule: Rule = {
         ),
       );
     } else {
-      if (name.length > MAX_NAME) {
+      // Mirror the reference validator: NFKC-normalize and strip, then apply
+      // the same character/length/case/hyphen rules (Unicode letters allowed).
+      const normalized = name.normalize("NFKC").trim();
+      if (normalized.length > MAX_NAME) {
         findings.push(
           find(
             skill,
             "metadata/name-length",
-            `name is ${name.length} characters (max ${MAX_NAME}).`,
+            `name is ${normalized.length} characters (max ${MAX_NAME}).`,
             lineOf(skill.content, "name:"),
           ),
         );
       }
-      if (!NAME_RE.test(name)) {
+      if (normalized !== normalized.toLowerCase()) {
         findings.push(
           find(
             skill,
             "metadata/name-format",
-            "name must use lowercase letters, numbers, and single hyphens (no leading/trailing/consecutive hyphens).",
+            "name must be lowercase.",
             lineOf(skill.content, "name:"),
           ),
         );
       }
-      const dir = basename(skill.bundleRoot);
-      if (name !== dir) {
+      if (normalized.startsWith("-") || normalized.endsWith("-")) {
+        findings.push(
+          find(
+            skill,
+            "metadata/name-format",
+            "name cannot start or end with a hyphen.",
+            lineOf(skill.content, "name:"),
+          ),
+        );
+      }
+      if (normalized.includes("--")) {
+        findings.push(
+          find(
+            skill,
+            "metadata/name-format",
+            "name cannot contain consecutive hyphens.",
+            lineOf(skill.content, "name:"),
+          ),
+        );
+      }
+      if (!NAME_CHAR_RE.test(normalized)) {
+        findings.push(
+          find(
+            skill,
+            "metadata/name-format",
+            "name must contain only letters, digits, and hyphens.",
+            lineOf(skill.content, "name:"),
+          ),
+        );
+      }
+      const dir = basename(skill.bundleRoot).normalize("NFKC");
+      if (normalized !== dir) {
         findings.push(
           find(
             skill,
             "metadata/name-matches-directory",
-            `name "${name}" must match the skill directory name "${dir}".`,
+            `name "${normalized}" must match the skill directory name "${dir}".`,
             lineOf(skill.content, "name:"),
           ),
         );
