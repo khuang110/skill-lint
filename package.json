@@ -1,0 +1,38 @@
+{
+  "name": "skilllint",
+  "version": "0.1.0",
+  "description": "Offline, read-only linter for agent skill bundles: validate SKILL.md metadata and catch broken or non-portable local references.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "skilllint": "dist/src/cli.js"
+  },
+  "files": [
+    "dist/src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && node --test \"dist/test/**/*.test.js\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "agent",
+    "skills",
+    "claude",
+    "cursor",
+    "codex",
+    "lint",
+    "markdown"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  }
+}
