@@ -140,3 +140,19 @@ test("missing frontmatter reports metadata/missing-frontmatter", () => {
   const findings = frontmatterRule.run(s);
   assert.ok(findings.some((f) => f.ruleId === "metadata/missing-frontmatter"));
 });
+
+test("duplicate frontmatter keys are reported as invalid", () => {
+  const s = makeSkill(`---
+name: demo
+name: demo2
+description: Does a thing.
+---
+
+# Demo
+`);
+  const findings = frontmatterRule.run(s);
+  assert.ok(
+    findings.some((f) => f.severity === "error"),
+    "duplicate keys must produce an error finding",
+  );
+});

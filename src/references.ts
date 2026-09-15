@@ -144,9 +144,16 @@ export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
       // Heading anchors are out of scope: strip the fragment and only check
       // that the referenced file exists.
       const fragmentIdx = link.target.indexOf("#");
-      const pathTarget =
+      const rawTarget =
         fragmentIdx === -1 ? link.target : link.target.slice(0, fragmentIdx);
-      if (pathTarget === "") continue; // same-file anchor only
+      if (rawTarget === "") continue; // same-file anchor only
+      // Decode percent-encoded link targets (e.g. "my%20file.md").
+      let pathTarget: string;
+      try {
+        pathTarget = decodeURIComponent(rawTarget);
+      } catch {
+        pathTarget = rawTarget;
+      }
       if (isAbsolute(pathTarget)) {
         findings.push({
           ruleId: "references/absolute",

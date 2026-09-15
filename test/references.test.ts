@@ -118,3 +118,24 @@ See [Title](URL) and [docs](<your-url>).
     await cleanup(root);
   }
 });
+
+test("URL-encoded link paths are decoded before resolution", async () => {
+  const root = await makeTempDir();
+  try {
+    await writeTree(root, {
+      "skills/demo/SKILL.md": `---
+name: demo
+description: Does a thing.
+---
+
+See [file](references/my%20file.md).
+`,
+      "skills/demo/references/my file.md": "ok\n",
+    });
+    const result = await loadSkills(root);
+    const findings = await checkReferences(result.skills[0]);
+    assert.deepEqual(findings, []);
+  } finally {
+    await cleanup(root);
+  }
+});
