@@ -54,13 +54,29 @@ function isInside(root: string, target: string): boolean {
   return rel !== ".." && !rel.startsWith(".." + sep) && !isAbsolute(rel);
 }
 
+export interface ReferenceOptions {
+  /** Suppress cross-skill warnings (monorepo skill catalogs). */
+  catalog?: boolean;
+}
+
 /**
  * Check local references inside a skill bundle. Follows linked Markdown
- * files, but never reads outside the bundle. Symlinked targets are resolved
- * and rejected when their real location escapes the bundle. Each finding
- * names the file that contains the broken link and shows the reference chain.
+ * files, but never reads outside the bundle.
+ *
+ * A link that escapes the bundle lexically is classified as:
+ *   - `references/missing` (error) when the target does not exist anywhere;
+ *   - `references/cross-skill` (warning) when it resolves to a real file
+ *     elsewhere in the repository (a legitimate sibling-skill reference);
+ *   - suppressed entirely in `catalog` mode.
+ *
+ * Symlinked targets are resolved and rejected when their real location
+ * escapes the bundle. Each finding names the file that contains the broken
+ * link and shows the reference chain.
  */
-export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
+export async function checkReferences(
+  skill: SkillFile,
+  options: ReferenceOptions = {},
+): Promise<Finding[]> {
   const findings: Finding[] = [];
   const visited = new Set<string>();
 
@@ -71,16 +87,50 @@ export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
     bundleReal = skill.bundleRoot;
   }
 
+  /**
+   * Classify a link that resolves (lexically) outside the bundle.
+   * Returns a Finding, or null when it should be suppressed (catalog mode +
+   * existing cross-skill target).
+   */
+  async function classifyOutside(
+    targetRel: string,
+    file: string,
+    line: number,
+    chain: string[],
+  ): Promise<Finding | null> {
+    // targetRel is relative to the bundle root (the literal link path).
+    const abs = resolve(skill.bundleRoot, targetRel);
+    let real: string | null = null;
+    try {
+      real = await realpath(abs);
+    } catch {
+      real = null;
+    }
+    const existsInRepo = real !== null && isInside(skill.scanRoot, real);
+    if (!existsInRepo) {
+      return {
+        ruleId: "references/missing",
+        severity: "error",
+        file,
+        line,
+        message: `Linked file does not exist: ${targetRel}. Referenced through: ${chain.join(" -> ")}.`,
+      };
+    }
+    if (options.catalog) return null;
+    return {
+      ruleId: "references/cross-skill",
+      severity: "warning",
+      file,
+      line,
+      message: `Link "${targetRel}" points to another skill outside the bundle. Referenced through: ${chain.join(" -> ")}.`,
+    };
+  }
+
   async function walk(relPath: string, chain: string[]): Promise<void> {
     const abs = resolve(skill.bundleRoot, relPath);
     if (!isInside(bundleReal, abs)) {
-      findings.push({
-        ruleId: "references/outside-bundle",
-        severity: "warning",
-        file: relPath,
-        line: 1,
-        message: `Reference depends on a file outside the skill bundle (${relPath}). Referenced through: ${chain.join(" -> ")}.`,
-      });
+      const f = await classifyOutside(relPath, relPath, 1, chain);
+      if (f) findings.push(f);
       return;
     }
 
@@ -99,13 +149,8 @@ export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
       return;
     }
     if (!isInside(bundleReal, real)) {
-      findings.push({
-        ruleId: "references/outside-bundle",
-        severity: "warning",
-        file: relPath,
-        line: 1,
-        message: `Reference resolves outside the skill bundle (${relPath}). Referenced through: ${chain.join(" -> ")}.`,
-      });
+      const f = await classifyOutside(relPath, relPath, 1, chain);
+      if (f) findings.push(f);
       return;
     }
     if (visited.has(real)) return;
@@ -114,13 +159,15 @@ export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
     let content: string;
     try {
       const st = await stat(real);
+      // A link to a directory is a valid reference; we only follow .md files.
+      if (st.isDirectory()) return;
       if (!st.isFile()) {
         findings.push({
           ruleId: "references/missing",
           severity: "error",
           file: relPath,
           line: 1,
-          message: `Linked target is not a file: ${relPath}. Referenced through: ${chain.join(" -> ")}.`,
+          message: `Linked target is not a file or directory: ${relPath}. Referenced through: ${chain.join(" -> ")}.`,
         });
         return;
       }
@@ -167,17 +214,11 @@ export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
       const targetRel = join(dirname(relPath), pathTarget);
       const targetAbs = resolve(skill.bundleRoot, targetRel);
 
-      // Reject paths that escape the bundle lexically, before touching the
-      // filesystem, so an absent out-of-bundle file is still reported as
-      // out-of-bundle rather than as missing.
+      // A link that escapes the bundle lexically is classified as missing or
+      // cross-skill (never followed).
       if (!isInside(skill.bundleRoot, targetAbs)) {
-        findings.push({
-          ruleId: "references/outside-bundle",
-          severity: "warning",
-          file: relPath,
-          line: link.line,
-          message: `Link "${pathTarget}" points outside the skill bundle (${targetRel}). Referenced through: ${chain.join(" -> ")}.`,
-        });
+        const f = await classifyOutside(targetRel, relPath, link.line, chain);
+        if (f) findings.push(f);
         continue;
       }
 
@@ -198,13 +239,8 @@ export async function checkReferences(skill: SkillFile): Promise<Finding[]> {
         continue;
       }
       if (!isInside(bundleReal, targetReal)) {
-        findings.push({
-          ruleId: "references/outside-bundle",
-          severity: "warning",
-          file: relPath,
-          line: link.line,
-          message: `Link "${pathTarget}" resolves outside the skill bundle (${targetRel}). Referenced through: ${chain.join(" -> ")}.`,
-        });
+        const f = await classifyOutside(targetRel, relPath, link.line, chain);
+        if (f) findings.push(f);
         continue;
       }
       await walk(targetRel, [...chain, targetRel]);

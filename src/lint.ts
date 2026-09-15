@@ -1,6 +1,6 @@
 import type { Finding, SkillFile } from "./types.js";
 import { rules } from "./rules/index.js";
-import { checkReferences } from "./references.js";
+import { checkReferences, type ReferenceOptions } from "./references.js";
 
 export interface SizeReport {
   path: string;
@@ -23,13 +23,16 @@ function sizeOf(skill: SkillFile): SizeReport {
 }
 
 /** Run all checks against every skill. */
-export async function lintSkills(skills: SkillFile[]): Promise<LintResult> {
+export async function lintSkills(
+  skills: SkillFile[],
+  options: ReferenceOptions = {},
+): Promise<LintResult> {
   const findings: Finding[] = [];
   for (const skill of skills) {
     for (const rule of rules) {
       findings.push(...rule.run(skill, skills));
     }
-    findings.push(...(await checkReferences(skill)));
+    findings.push(...(await checkReferences(skill, options)));
   }
   findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
   const sizes = skills.map(sizeOf);

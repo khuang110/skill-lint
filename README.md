@@ -47,6 +47,9 @@ skilllint . --format github
 
 # Treat warnings as errors
 skilllint . --strict
+
+# Scan a monorepo skill catalog (ignore cross-skill links)
+skilllint . --catalog
 ```
 
 ## Exit codes

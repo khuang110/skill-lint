@@ -31,7 +31,7 @@ test("reports a missing reference with its chain", async () => {
   }
 });
 
-test("reports an out-of-bundle reference without reading it", async () => {
+test("out-of-bundle link to a missing file reports missing", async () => {
   const root = await makeTempDir();
   try {
     await writeTree(root, {
@@ -46,10 +46,87 @@ See [outside](../outside.md).
     });
     const result = await loadSkills(root);
     const findings = await checkReferences(result.skills[0]);
-    const outside = findings.filter((f) => f.ruleId === "references/outside-bundle");
-    assert.equal(outside.length, 1);
-    assert.equal(outside[0].severity, "warning");
-    assert.match(outside[0].message, /outside the skill bundle/);
+    const missing = findings.filter((f) => f.ruleId === "references/missing");
+    assert.equal(missing.length, 1);
+    assert.equal(missing[0].severity, "error");
+  } finally {
+    await cleanup(root);
+  }
+});
+
+test("cross-skill link to an existing file is a warning, not missing", async () => {
+  const root = await makeTempDir();
+  try {
+    await writeTree(root, {
+      "skills/demo/SKILL.md": `---
+name: demo
+description: Does a thing.
+---
+
+See [other](../other-skill/SKILL.md).
+`,
+      "skills/other-skill/SKILL.md": `---
+name: other-skill
+description: Other.
+---
+
+# Other
+`,
+    });
+    const result = await loadSkills(root);
+    const findings = await checkReferences(result.skills[0]);
+    const cross = findings.filter((f) => f.ruleId === "references/cross-skill");
+    assert.equal(cross.length, 1);
+    assert.equal(cross[0].severity, "warning");
+    assert.ok(!findings.some((f) => f.ruleId === "references/missing"));
+  } finally {
+    await cleanup(root);
+  }
+});
+
+test("catalog mode suppresses cross-skill warnings", async () => {
+  const root = await makeTempDir();
+  try {
+    await writeTree(root, {
+      "skills/demo/SKILL.md": `---
+name: demo
+description: Does a thing.
+---
+
+See [other](../other-skill/SKILL.md).
+`,
+      "skills/other-skill/SKILL.md": `---
+name: other-skill
+description: Other.
+---
+
+# Other
+`,
+    });
+    const result = await loadSkills(root);
+    const findings = await checkReferences(result.skills[0], { catalog: true });
+    assert.deepEqual(findings, []);
+  } finally {
+    await cleanup(root);
+  }
+});
+
+test("link to a directory is a valid reference, not missing", async () => {
+  const root = await makeTempDir();
+  try {
+    await writeTree(root, {
+      "skills/demo/SKILL.md": `---
+name: demo
+description: Does a thing.
+---
+
+See [examples](examples/).
+`,
+      "skills/demo/examples/readme.txt": "hi\n",
+    });
+    const result = await loadSkills(root);
+    const findings = await checkReferences(result.skills[0]);
+    assert.deepEqual(findings, []);
   } finally {
     await cleanup(root);
   }

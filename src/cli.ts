@@ -9,12 +9,14 @@ interface Options {
   path: string;
   format: Format;
   strict: boolean;
+  catalog: boolean;
 }
 
 function parseArgs(argv: string[]): Options {
   let path = ".";
   let format: Format = "text";
   let strict = false;
+  let catalog = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--format" || a === "-f") {
@@ -23,6 +25,8 @@ function parseArgs(argv: string[]): Options {
       else usageError(`unknown format: ${v}`);
     } else if (a === "--strict") {
       strict = true;
+    } else if (a === "--catalog") {
+      catalog = true;
     } else if (a === "--help" || a === "-h") {
       printHelp();
       process.exit(0);
@@ -32,7 +36,7 @@ function parseArgs(argv: string[]): Options {
       path = a;
     }
   }
-  return { path, format, strict };
+  return { path, format, strict, catalog };
 }
 
 function usageError(msg: string): never {
@@ -45,12 +49,13 @@ function printHelp(): void {
   process.stdout.write(`skilllint — catch broken skill bundles before release
 
 Usage:
-  skilllint [path] [--format text|json|github] [--strict]
+  skilllint [path] [--format text|json|github] [--strict] [--catalog]
 
 Options:
   path              File, skill directory, or repository to scan (default: .)
   -f, --format      Output format (default: text)
   --strict          Treat warnings as errors (non-zero exit)
+  --catalog         Treat the path as a monorepo skill catalog (ignore cross-skill links)
   -h, --help        Show this help
 
 Exit codes:
@@ -118,7 +123,7 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  const lint = await lintSkills(result.skills);
+  const lint = await lintSkills(result.skills, { catalog: opts.catalog });
   const { errors, warnings } = countBySeverity(lint.findings);
 
   if (opts.format === "json") {
