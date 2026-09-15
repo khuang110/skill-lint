@@ -36,16 +36,16 @@ function parseArgs(argv: string[]): Options {
 }
 
 function usageError(msg: string): never {
-  process.stderr.write(`skill-lint: ${msg}\n`);
-  process.stderr.write("Run `skill-lint --help` for usage.\n");
+  process.stderr.write(`skilllint: ${msg}\n`);
+  process.stderr.write("Run `skilllint --help` for usage.\n");
   process.exit(2);
 }
 
 function printHelp(): void {
-  process.stdout.write(`skill-lint — catch broken skill bundles before release
+  process.stdout.write(`skilllint — catch broken skill bundles before release
 
 Usage:
-  skill-lint [path] [--format text|json|github] [--strict]
+  skilllint [path] [--format text|json|github] [--strict]
 
 Options:
   path              File, skill directory, or repository to scan (default: .)
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
 
   if (result.skills.length === 0) {
     process.stderr.write(
-      `skill-lint: no SKILL.md files found under ${opts.path}\n`,
+      `skilllint: no SKILL.md files found under ${opts.path}\n`,
     );
     process.exit(2);
   }
@@ -154,6 +154,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  process.stderr.write(`skill-lint: ${(err as Error).message}\n`);
+  process.stderr.write(`skilllint: ${(err as Error).message}\n`);
   process.exit(2);
 });

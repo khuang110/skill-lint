@@ -96,6 +96,18 @@ test("unknown option exits 2", async () => {
   assert.match(r.err, /unknown option/);
 });
 
+test("help and error text use the skilllint binary name", async () => {
+  const help = await run(["--help"]);
+  assert.equal(help.code, 0);
+  assert.match(help.out, /skilllint/);
+  assert.ok(!help.out.includes("skill-lint"), "must not advertise the taken name");
+
+  const err = await run(["--bogus"]);
+  assert.equal(err.code, 2);
+  assert.match(err.err, /skilllint/);
+  assert.ok(!err.err.includes("skill-lint"), "error text must use the binary name");
+});
+
 test("github format escapes user-controlled text", async () => {
   const root = await makeTempDir();
   try {

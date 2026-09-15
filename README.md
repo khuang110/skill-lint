@@ -1,6 +1,6 @@
-# skill-lint
+# skilllint
 
-skill-lint checks agent skill bundles before you release them. It runs offline. It does not change files.
+skilllint checks agent skill bundles before you release them. It runs offline. It does not change files.
 
 It answers one question: will this skill work when someone installs it?
 
@@ -13,36 +13,36 @@ It answers one question: will this skill work when someone installs it?
 
 ## What it does not check
 
-skill-lint is not a security scanner. It does not judge prompt quality. It does not fetch web links. It does not run scripts.
+skilllint is not a security scanner. It does not judge prompt quality. It does not fetch web links. It does not run scripts.
 
 For security scanning, use a tool built for that purpose.
 
 ## Install
 
 ```bash
-npm install -g skill-lint
+npm install -g skilllint
 ```
 
 ## Use
 
 ```bash
 # Check the current directory
-skill-lint .
+skilllint .
 
 # Check a specific skill directory
-skill-lint ./skills/my-skill
+skilllint ./skills/my-skill
 
 # Check a repository
-skill-lint ./my-repo
+skilllint ./my-repo
 
 # Machine-readable output
-skill-lint . --format json
+skilllint . --format json
 
 # GitHub Actions annotations
-skill-lint . --format github
+skilllint . --format github
 
 # Treat warnings as errors
-skill-lint . --strict
+skilllint . --strict
 ```
 
 ## Exit codes
@@ -65,7 +65,7 @@ references/setup.md:1  error  references/missing
 
 ## Scope
 
-skill-lint reads files inside the skill bundle only. It does not read files
+skilllint reads files inside the skill bundle only. It does not read files
 outside the bundle. It does not send data over the network. It does not write
 files.
 
