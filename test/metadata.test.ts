@@ -120,6 +120,33 @@ description: ${"x".repeat(1025)}
   assert.ok(findings.some((f) => f.ruleId === "metadata/description-length"));
 });
 
+test("name over 64 characters reports metadata/name-length", () => {
+  const s = makeSkill(`---
+name: ${"a".repeat(65)}
+description: Does a thing.
+---
+
+# Demo
+`);
+  const findings = frontmatterRule.run(s);
+  assert.ok(findings.some((f) => f.ruleId === "metadata/name-length"));
+});
+
+test("compatibility over 500 characters reports metadata/compatibility-length", () => {
+  const s = makeSkill(`---
+name: demo
+description: Does a thing.
+compatibility: ${"r".repeat(501)}
+---
+
+# Demo
+`);
+  const findings = frontmatterRule.run(s);
+  assert.ok(
+    findings.some((f) => f.ruleId === "metadata/compatibility-length"),
+  );
+});
+
 test("metadata with non-string value reports metadata/metadata-string-values", () => {
   const s = makeSkill(`---
 name: demo
