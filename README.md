@@ -63,6 +63,32 @@ references/setup.md:1  error  references/missing
   Referenced through: SKILL.md -> references/setup.md.
 ```
 
+## Use in CI
+
+```yaml
+# .github/workflows/skilllint.yml
+name: skilllint
+on: [push, pull_request]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx skilllint . --format github --strict
+```
+
+Or with the `--format github` output for inline PR annotations:
+
+```yaml
+      - run: npx skilllint . --format github --strict
+```
+
+Exit code 1 (errors found) fails the build. Use `--strict` to also fail on
+warnings.
+
 ## Scope
 
 skilllint reads files inside the skill bundle only. It does not read files
