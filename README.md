@@ -78,4 +78,4 @@ npm test
 
 ## License
 
-License is not yet selected.
+MIT. See [LICENSE](LICENSE).
